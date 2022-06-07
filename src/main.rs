@@ -1,31 +1,35 @@
-use std::io::{Error};
-
-
+use std::io::Error;
 
 fn main() {
-    // let args: Vec<String> = env::args().collect();
-    // println!("Printing out environment variables");
-    // args.into_iter().for_each(|variable: String| println!("{}", variable));
+    let lines = read_full_stdin()
+        .unwrap()
+        .into_iter()
+        .reduce(|a, b| a + " " + &b)
+        .unwrap();
 
-    
-
-    let lines = read_full_stdin().unwrap();
-
-    println!("{:?}", lines);
-    
+    println!("{}", lines);
 }
 
 fn read_full_stdin() -> Result<Vec<String>, Error> {
     let mut matching_lines = vec![];
-    
+
     let mut read = 1;
+
+    let match_sequence = "origin/";
 
     while read != 0 {
         let mut line = String::new();
         read = std::io::stdin().read_line(&mut line)?;
+        let line = line.trim();
 
-        if line.contains("origin/") {
-            let line = line.replace("origin/", "");
+        if let Some(result) = line.find(match_sequence) {
+            println!("Found origin/ at location: {}", result);
+
+            let line: String = line
+                .get(result + match_sequence.len()..line.len())
+                .unwrap()
+                .into();
+            println!("Line without text: {}", line);
             matching_lines.push(line);
         }
     }
