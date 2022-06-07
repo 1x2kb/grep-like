@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "clean-git-output"
+name = "rgrep"
 version = "0.1.0"
