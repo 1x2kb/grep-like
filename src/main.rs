@@ -1,37 +1,68 @@
-use std::io::{BufRead, Error, Write};
+use std::io::{BufRead, Error, Lines, StdinLock, StdoutLock, Write};
 
-fn main() {
-    let lines = read_full_stdin("origin/")
-        .unwrap()
-        .into_iter()
-        .reduce(|a, b| a + " " + &b)
-        .unwrap();
-
-    println!("{}", lines);
+enum WriteType {
+    Single,
+    Mutli,
 }
 
-fn read_full_stdin(match_sequence: &str) -> Result<Vec<String>, Error> {
-    let mut matching_lines = vec![];
+fn main() {
+    let matching_sequence = "origin/"; // TODO: read in from env vars.
+    let mode_type = WriteType::Single; // TODO: read mode type from environment variables.
+    let lines = get_lines_from_stdin();
+    let matches = read_full_stdin(lines, matching_sequence).unwrap();
 
-    let mut read = 1;
+    write_matches_to_output(matches, mode_type).unwrap();
+}
 
-    std::io::stdin()
-        .lock()
-        .lines()
+fn get_lines_from_stdin() -> Lines<StdinLock<'static>> {
+    std::io::stdin().lock().lines()
+}
+
+fn read_full_stdin(lines: Lines<StdinLock>, match_sequence: &str) -> Result<Vec<String>, Error> {
+    let matching_lines = lines
         .into_iter()
-        .for_each(|line_result| match line_result {
+        .filter_map(|line_result| match line_result {
             Ok(line) => {
                 let line = line.trim();
                 if let Some(matched_index) = line.find(match_sequence) {
-                    let line = line
-                        .get(matched_index + match_sequence.len()..line.len())
-                        .unwrap()
-                        .into();
-                    matching_lines.push(line);
+                    return Option::Some(
+                        line.get(matched_index + match_sequence.len()..line.len())
+                            .unwrap()
+                            .to_string(),
+                    );
                 }
+
+                return Option::None;
             }
-            Err(_) => todo!(),
-        });
+            Err(_) => Option::None,
+        })
+        .collect();
 
     Result::Ok(matching_lines)
+}
+
+fn write_matches_to_output(matches: Vec<String>, mode: WriteType) -> Result<(), Error> {
+    let mut output = std::io::stdout().lock();
+
+    match mode {
+        WriteType::Single => write_single_line(matches, output),
+        WriteType::Mutli => write_multi_line(matches, output),
+    }
+}
+
+fn write_single_line(matches: Vec<String>, mut output: StdoutLock) -> Result<(), Error> {
+    let line = matches.into_iter().reduce(|a, b| a + " " + &b).unwrap();
+
+    output.write(line.as_bytes()).unwrap();
+    output.flush()
+}
+
+fn write_multi_line(matches: Vec<String>, mut output: StdoutLock) -> Result<(), Error> {
+    let output_copy = &mut output;
+
+    matches.into_iter().for_each(move |matched_line| {
+        output_copy.write(matched_line.as_bytes()).unwrap();
+    });
+
+    output.flush()
 }
