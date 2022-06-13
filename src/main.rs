@@ -23,7 +23,6 @@ fn read_full_stdin(lines: Lines<StdinLock>, match_sequence: &str) -> Result<Vec<
         .into_iter()
         .filter_map(|line_result| match line_result {
             Ok(line) => {
-                let line = line.trim();
                 if let Some(matched_index) = line.find(match_sequence) {
                     return Option::Some(
                         line.get(matched_index + match_sequence.len()..line.len())
