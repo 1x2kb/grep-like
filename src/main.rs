@@ -7,12 +7,22 @@ enum WriteMode {
     Multi,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
+enum MatchMode {
+    Find,
+    Remove,
+}
+
 #[derive(Parser)]
 #[clap(author, version, about, long_about = Option::None)]
 struct Args {
     /// The search text to match against.
     #[clap(value_parser)]
     search_text: String,
+
+    /// Controls whether the search text will simply be matched or removed.
+    #[clap(short, long, arg_enum, value_parser, default_value_t = MatchMode::Remove)]
+    match_mode: MatchMode,
 
     /// Whether to write to a single line or multiple lines.
     #[clap(short, long, arg_enum, value_parser, default_value_t = WriteMode::Single)]
@@ -21,12 +31,10 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let matching_sequence = args.search_text;
-    let write_mode = args.write_mode;
     let lines = get_lines_from_stdin();
-    let matches = scan_buffer_for_matches(lines, &matching_sequence).unwrap();
+    let matches = scan_buffer_for_matches(lines, &args.search_text, &args.match_mode).unwrap();
 
-    write_matches_to_output(matches, write_mode).unwrap();
+    write_matches_to_output(matches, &args.write_mode).unwrap();
 }
 
 fn get_lines_from_stdin() -> Lines<StdinLock<'static>> {
@@ -36,17 +44,21 @@ fn get_lines_from_stdin() -> Lines<StdinLock<'static>> {
 fn scan_buffer_for_matches(
     lines: Lines<StdinLock>,
     match_sequence: &str,
+    match_mode: &MatchMode,
 ) -> Result<Vec<String>, Error> {
     let matching_lines = lines
         .into_iter()
         .filter_map(|line_result| match line_result {
             Ok(line) => {
                 if let Some(matched_index) = line.find(match_sequence) {
-                    return Option::Some(
-                        line.get(matched_index + match_sequence.len()..line.len())
-                            .unwrap()
-                            .to_string(),
-                    );
+                    return match match_mode {
+                        MatchMode::Find => Option::Some(line),
+                        MatchMode::Remove => Option::Some(
+                            line.get(matched_index + match_sequence.len()..line.len())
+                                .unwrap()
+                                .to_string(),
+                        ),
+                    };
                 }
 
                 return Option::None;
@@ -58,7 +70,7 @@ fn scan_buffer_for_matches(
     Result::Ok(matching_lines)
 }
 
-fn write_matches_to_output(matches: Vec<String>, mode: WriteMode) -> Result<(), Error> {
+fn write_matches_to_output(matches: Vec<String>, mode: &WriteMode) -> Result<(), Error> {
     let output = std::io::stdout().lock();
 
     match mode {
