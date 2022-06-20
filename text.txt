@@ -1,4 +1,0 @@
-Not usable line.
-deleted origin/branch
-origin/get-stuff
-origin/help-rule
