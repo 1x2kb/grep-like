@@ -6,10 +6,10 @@ enum WriteType {
 }
 
 fn main() {
-    let matching_sequence = "origin/"; // TODO: read in from env vars.
-    let mode_type = WriteType::Single; // TODO: read mode type from environment variables.
+    let matching_sequence = "origin/"; // TODO: read in from env::args.
+    let mode_type = WriteType::Single; // TODO: read mode type from env::args.
     let lines = get_lines_from_stdin();
-    let matches = read_full_stdin(lines, matching_sequence).unwrap();
+    let matches = scan_buffer_for_matches(lines, matching_sequence).unwrap();
 
     write_matches_to_output(matches, mode_type).unwrap();
 }
@@ -18,7 +18,10 @@ fn get_lines_from_stdin() -> Lines<StdinLock<'static>> {
     std::io::stdin().lock().lines()
 }
 
-fn read_full_stdin(lines: Lines<StdinLock>, match_sequence: &str) -> Result<Vec<String>, Error> {
+fn scan_buffer_for_matches(
+    lines: Lines<StdinLock>,
+    match_sequence: &str,
+) -> Result<Vec<String>, Error> {
     let matching_lines = lines
         .into_iter()
         .filter_map(|line_result| match line_result {
