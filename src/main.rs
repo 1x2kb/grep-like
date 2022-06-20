@@ -1,17 +1,32 @@
+use clap::{clap_derive::ArgEnum, Parser};
 use std::io::{BufRead, Error, Lines, StdinLock, StdoutLock, Write};
 
-enum WriteType {
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
+enum WriteMode {
     Single,
-    Mutli,
+    Multi,
+}
+
+#[derive(Parser)]
+#[clap(author, version, about, long_about = Option::None)]
+struct Args {
+    /// The search text to match against.
+    #[clap(value_parser)]
+    search_text: String,
+
+    /// Whether to write to a single line or multiple lines.
+    #[clap(short, long, arg_enum, value_parser, default_value_t = WriteMode::Single)]
+    write_mode: WriteMode,
 }
 
 fn main() {
-    let matching_sequence = "origin/"; // TODO: read in from env::args.
-    let mode_type = WriteType::Single; // TODO: read mode type from env::args.
+    let args = Args::parse();
+    let matching_sequence = args.search_text;
+    let write_mode = args.write_mode;
     let lines = get_lines_from_stdin();
-    let matches = scan_buffer_for_matches(lines, matching_sequence).unwrap();
+    let matches = scan_buffer_for_matches(lines, &matching_sequence).unwrap();
 
-    write_matches_to_output(matches, mode_type).unwrap();
+    write_matches_to_output(matches, write_mode).unwrap();
 }
 
 fn get_lines_from_stdin() -> Lines<StdinLock<'static>> {
@@ -43,12 +58,12 @@ fn scan_buffer_for_matches(
     Result::Ok(matching_lines)
 }
 
-fn write_matches_to_output(matches: Vec<String>, mode: WriteType) -> Result<(), Error> {
-    let mut output = std::io::stdout().lock();
+fn write_matches_to_output(matches: Vec<String>, mode: WriteMode) -> Result<(), Error> {
+    let output = std::io::stdout().lock();
 
     match mode {
-        WriteType::Single => write_single_line(matches, output),
-        WriteType::Mutli => write_multi_line(matches, output),
+        WriteMode::Single => write_single_line(matches, output),
+        WriteMode::Multi => write_multi_line(matches, output),
     }
 }
 
@@ -60,10 +75,8 @@ fn write_single_line(matches: Vec<String>, mut output: StdoutLock) -> Result<(),
 }
 
 fn write_multi_line(matches: Vec<String>, mut output: StdoutLock) -> Result<(), Error> {
-    let output_copy = &mut output;
-
-    matches.into_iter().for_each(move |matched_line| {
-        output_copy.write(matched_line.as_bytes()).unwrap();
+    matches.into_iter().for_each(|matched_line| {
+        output.write((matched_line + "\n").as_bytes()).unwrap();
     });
 
     output.flush()
