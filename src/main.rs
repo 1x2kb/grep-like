@@ -20,7 +20,7 @@ struct Args {
     #[clap(value_parser)]
     search_text: String,
 
-    /// Controls whether the search text will simply be matched or remove all text before and upto the matched text.
+    /// Controls whether the search text will simply be matched or removed.
     #[clap(short, long, arg_enum, value_parser, default_value_t = MatchMode::Remove)]
     match_mode: MatchMode,
 
